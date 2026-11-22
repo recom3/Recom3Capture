@@ -65,6 +65,27 @@ adb -s PHONE_SERIAL install -r artifacts/ICE3-1.0.3-capture.1-debug.apk
 
 The helper bootstrap uses private app storage and a shell-owned temporary directory with mode 0700. Keys are not passed as command-line arguments or printed. The startup script handles the legacy device's PTY/SIGHUP behavior explicitly.
 
+## RIF package and 64px catalog thumbnail
+
+Local distribution files are `dist/Recom3Capture.rif` and `dist/thumbnail.png`. The RIF wraps the existing signed glasses APK; the thumbnail is a separate, exact **64 x 64 RGBA PNG** for the catalog. The camera/display capture icon is original SVG artwork, not a photograph or recorded frame.
+
+![64px capture catalog thumbnail](assets/thumbnail.png)
+
+Package with the existing trusted local RIF utility:
+
+```powershell
+# Reuse the current, verified development APK:
+.\package.ps1 -RifTool 'C:\Tools\PrepRecom3Rif.jar' -SkipBuild
+# Build the glasses APK first, then package it:
+.\package.ps1 -RifTool 'C:\Tools\PrepRecom3Rif.jar'
+# Wrap another already signed APK:
+.\package.ps1 -RifTool 'C:\Tools\PrepRecom3Rif.jar' -SkipBuild -Apk '.\dist\Recom3Capture-0.1.0.apk'
+```
+
+The packaging script decodes a disposable copy and verifies that its SHA-256 matches the input APK. It checks the PNG signature and exact dimensions and writes `dist/SHA256SUMS.txt`. The external RIF utility is not redistributed. The delivered RIF contains the existing development-signed 0.1.0 APK and does not bundle the phone companion or start the display helper automatically. Existing installation and helper requirements still apply.
+
+Editable icon artwork is `assets/capture.svg`; the generated PNG is checked in so packaging does not require an image renderer. To regenerate it, install ImageMagick and run `tools/generate-thumbnail.ps1`. APKs, RIF outputs, captured media and signing keys remain outside Git. This packaging step does not install or publish anything.
+
 ## Documents
 
 - [Implementation protocol](docs/protocol.md)

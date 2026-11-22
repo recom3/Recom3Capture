@@ -51,3 +51,11 @@ ICE3 feature source is saved locally at merge commit 4611a82 on codex/capture-ph
 Final cleanup removed the development-PC media forward and temporary probe/install files. The installed Pixel APK hash matches the local delivery APK exactly. Both app screens were opened for the user; the unlocked-phone normal UI review subsequently passed as described above.
 
 Publication preparation: the user-created recom3/Recom3Capture repository was verified empty with default branch main, and linked as origin. The existing Windows OpenSSH transport authenticates successfully; the separately selected Recom3 key did not authenticate. No push has been performed. Latest companion documentation commit: 30c7797.
+
+## RIF and thumbnail preparation
+
+The existing development APK SHA-256 `faf40014a7edfe8ce9014c60b01c71395cad8effff13eb4f24611512dd86b395` was reused without runtime changes. Its API 16 v1/JAR signing verification passed. The trusted local RIF utility produced a 16,976-byte `Recom3Capture.rif`; decoding a disposable copy reproduced the 16,974-byte input APK exactly by SHA-256.
+
+The catalog thumbnail is an original capture/display glyph rendered from `assets/capture.svg`, visually inspected at its actual size. Its PNG signature and 64 x 64 dimensions passed; ImageMagick identifies it as sRGBA. No real photograph, screenshot or video frame is used by the icon. Package and thumbnail hashes are in the ignored `dist/SHA256SUMS.txt`.
+
+Only local package files were prepared. The resting glasses were not contacted, and RIF installation was not exercised. No new GitHub push or release upload was performed for this packaging change.
