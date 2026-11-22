@@ -1269,7 +1269,7 @@ index 0000000..6b17e18
 +}
 diff --git a/docs/CAPTURE.md b/docs/CAPTURE.md
 new file mode 100644
-index 0000000..55740c3
+index 0000000..dcaf256
 --- /dev/null
 +++ b/docs/CAPTURE.md
 @@ -0,0 +1,13 @@
@@ -1285,7 +1285,7 @@ index 0000000..55740c3
 +
 +The debug source set contains development instrumentation for real Wi-Fi source and phone encoder tests. Pairing configuration is provisioned as a temporary private file and removed by the verification script. These tests do not assert normal UI acceptance or background/locked recording support. Release builds do not package the instrumentation.
 +
-+Validation on the original Jet and Pixel 11: real camera photo and screenshot delivery, camera/display MP4 runs, complete-file decoding, 18 glasses HTTP host assertions and 123 existing ICE3 tests passed. Normal phone UI acceptance, Snow2 hardware, endurance and Android Auto coexistence remain pending.
++Validation on the original Jet and Pixel 11: real camera photo and screenshot delivery, camera/display MP4 runs, complete-file decoding, 18 glasses HTTP host assertions and 123 existing ICE3 tests passed. Unlocked-phone UI acceptance also passed using the normal controls: pairing, source selection, camera photo, screenshot, live/stop, record/stop, gallery selection, external MP4 viewer opening and opening/cancelling the Android share chooser. Actual transfer through an external sharing application was not tested. Snow2 hardware, endurance and Android Auto coexistence remain pending.
 \ No newline at end of file
 diff --git a/docs/VISION.md b/docs/VISION.md
 new file mode 100644

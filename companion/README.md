@@ -1,6 +1,6 @@
 # ICE3 integration
 
-The existing phone repository is preserved separately. Local branch `codex/capture-phone`, commit **3c02ac5** (feature merge 4611a82), combines master `b685785` with Jet Vision/App Actions `5fa0677` and adds the native Capture feature. Both current Bluetooth fixes and prior Vision features are included.
+The existing phone repository is preserved separately. Local branch `codex/capture-phone`, commit **30c7797** (feature merge 4611a82), combines master `b685785` with Jet Vision/App Actions `5fa0677` and adds the native Capture feature. Both current Bluetooth fixes and prior Vision features are included.
 
 The linked checkout is under `.local/ice3` in the Recom3Capture project. It uses the existing Snow3 repository's Git database; its files, credentials and build outputs are not vendored into this repository. The original checkout remains on its original branch.
 
@@ -19,4 +19,4 @@ Use the existing working signing identity before updating a phone. Do not uninst
 
 Native feature source is under `app/src/main/java/com/recom3/snow3/capture`. Debug-only device verification is under `app/src/debug`, with source also retained in the parent project's `device-tests` directory.
 
-No remote changes, pushes or public repository creation were performed.
+The companion branch remains local; publishing this integration patch does not push a Snow3 branch.

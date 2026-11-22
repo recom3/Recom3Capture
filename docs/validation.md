@@ -32,7 +32,7 @@ Source acquisition was first checked through an explicit USB ADB forward on the 
 
 These are short backend acceptance runs using the production HTTP sources and phone encoder. The frame counts include any repeated cached camera frames. Delivered view is approximately 2-3 frames/s in these runs; this is not smooth 30 fps video, a latency benchmark or an endurance result.
 
-The Pixel was protected by its fingerprint lock during UI testing. An unlocked-phone review of the normal buttons/gallery remains pending. No lock credential was entered or security setting changed.
+After the user unlocked the Pixel, the normal native UI was tested through serial-qualified ADB taps: pairing, source selection, full camera photo, screenshot, live start/stop, screen/camera record start/stop, saved-media selection and opening an MP4 in Files by Google. The Android share chooser opened with the selected MP4 and was cancelled; actual transfer through an external application was not tested. The UI reported successful saves for the screenshot, camera JPEG and both short MP4 recordings. No lock credential was entered or security setting changed.
 
 The successful checks use instrumentation bundled only in the ICE3 debug source set, from the checked-in `device-tests` source. The two standalone verification APK install sessions were identified by shell ownership, exact APK size and creation timestamps and explicitly abandoned, so the supported test route updates the already authorized development ICE3 package and preserves normal platform verification. Backend verification is not a manual UI test. Temporary stills are named `validation-screen` / `validation-camera`; resulting MP4s remain local.
 
@@ -44,8 +44,10 @@ The probe bootstrap initially encountered the legacy device's PTY echo/EOF behav
 
 ## Remaining limits
 
-Snow2 was not connected and is not validated. Long sessions, heat/battery measurements, camera/audio concurrency, Android Auto coexistence, Bluetooth-only delivery, locked/background phone recording, microphone/internal audio, encrypted transport and full-resolution glasses-local camera clips are not demonstrated. The first release remains a private development prototype.
+Snow2 was not connected and is not validated. Long sessions, heat/battery measurements, camera/audio concurrency, Android Auto coexistence, Bluetooth-only delivery, locked/background phone recording, microphone/internal audio, encrypted transport and full-resolution glasses-local camera clips are not demonstrated. The first release remains a development prototype.
 
-ICE3 feature source is saved locally at merge commit 4611a82 on codex/capture-phone; documentation was clarified in 3c02ac5. Its patch round-trip check passed. No source was pushed or repository published.
+ICE3 feature source is saved locally at merge commit 4611a82 on codex/capture-phone; documentation was clarified in 3c02ac5. Its patch round-trip check passed. At the end of those device tests, no source had been pushed.
 
-Final cleanup removed the development-PC media forward and temporary probe/install files. The installed Pixel APK hash matches the local delivery APK exactly. Both app screens were opened for the user; the normal phone UI review still requires unlocking the Pixel.
+Final cleanup removed the development-PC media forward and temporary probe/install files. The installed Pixel APK hash matches the local delivery APK exactly. Both app screens were opened for the user; the unlocked-phone normal UI review subsequently passed as described above.
+
+Publication preparation: the user-created recom3/Recom3Capture repository was verified empty with default branch main, and linked as origin. The existing Windows OpenSSH transport authenticates successfully; the separately selected Recom3 key did not authenticate. No push has been performed. Latest companion documentation commit: 30c7797.

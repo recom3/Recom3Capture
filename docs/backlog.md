@@ -1,6 +1,6 @@
 # Implementation backlog
 
-Updated 22 November 2026. Initial Jet/Pixel prototype implemented; Snow2 and unlocked-phone UI acceptance remain pending.
+Updated 22 November 2026. Initial Jet/Pixel prototype implemented and normal unlocked-phone UI acceptance passed; Snow2 hardware remains pending.
 
 ## Completed
 
@@ -17,7 +17,7 @@ Updated 22 November 2026. Initial Jet/Pixel prototype implemented; Snow2 and unl
 
 ## Remaining acceptance
 
-- [ ] Unlocked-phone manual UI: pairing, photo, live/stop, record/stop, source switching, saved-media viewer/share.
+- [x] Unlocked-phone normal UI: pairing, photo, live/stop, record/stop, source switching, saved-media selection, external viewer and share chooser. External share delivery is not tested.
 - [x] Glasses delayed screenshot and display recording while navigating Settings sections on the final build.
 - [ ] Test Snow2 hardware independently, including display privileges, dimensions, Wi-Fi and no-camera behavior.
 - [ ] Short-run failure tests and longer battery/thermal/network/coexistence tests before broader use.
