@@ -1,49 +1,76 @@
 # Recom3Capture
 
-Design preparation for a Recon Jet / Snow2 capture application and an ICE3 phone companion feature.
+Native Recon Jet capture prototype with an **ICE3 Capture** feature in the existing phone companion. The glasses APK is `com.recom3.capture` 0.1.0; the phone APK updates `com.recom3.snow3` to 1.0.3-capture.1 / code 4.
 
-**Status: design only, 22 November 2026. No application code, APK or hardware validation has been produced for this project.** Hardware is reserved for another task; no ADB commands, installs or device configuration changes were performed during this preparation.
+## Features
 
-## Intended behavior
+- Phone-triggered camera photographs (1280 x 960 on the tested Jet).
+- Phone-triggered screenshots of another foreground glasses application.
+- Camera and display live view over the existing private Wi-Fi/hotspot network.
+- Silent H.264/MP4 recording on the phone from incoming camera or display frames.
+- Phone capture history and sharing through a restricted FileProvider.
+- A glasses-triggered screenshot with a five-second delay, leaving time to return to another app.
 
-- Send a photograph from the Jet camera to the phone, triggered from the phone or glasses.
-- Show the Jet camera live on the phone and record camera clips.
-- Take a screenshot of the foreground glasses application on Jet and Snow2.
-- Show the glasses display on the phone and save a video of activity across glasses applications.
-- Offer capture, start, stop, connection state and a local phone gallery through ICE3.
+The first prototype uses authenticated local HTTP over Wi-Fi for both control and media. The earlier Bluetooth OBJECT/FILE proposal remains future work; this feature does not open or change Recon Bluetooth sockets and does not call a cloud provider.
 
-These are planned features. Camera, display capture and transport support must be negotiated independently on every unit. Snow2 display capture is in scope; camera features must remain unavailable when no camera is reported.
+See [validation results and limitations](docs/validation.md) for the exact tested paths. Source implementation is not proof that every feature or model has passed hardware validation.
 
-## Proposed components
+## Compatibility and limits
 
-| Component | Responsibility |
-| --- | --- |
-| Glasses APK, proposed package `com.recom3.capture` | HUD controls, background session, camera source, display source adapters, capture and transport |
-| ICE3 / Snow3 Capture feature | Existing Bluetooth connection owner, remote controls, preview, gallery, phone-side display-video encoding |
-| Optional display helper | Only if ordinary application permissions cannot capture other applications; exact deployment depends on hardware findings |
-| Shared capture contract | Versioned commands, capability report, acknowledgements, media metadata and errors |
+- Glasses: API 16 framework APIs; tested hardware is the original Recon Jet, Android 4.1.2. Snow2 is an intended target and has not been connected for this project. Camera use is conditional on actual camera presence.
+- Display capture needs the optional **shell-UID helper**, started explicitly from an authorized PC. A normal app cannot capture the display on the tested firmware. No root, platform signing, global permission changes, system APK replacement or network ADB are used.
+- The helper runs locally on the glasses. After startup, capture uses Wi-Fi; a reboot requires starting the helper again from the PC. Starting it does not create a permanent privileged installation.
+- Initial camera live frames are 320 x 240; display frames are 428 x 240. Full-resolution still photos are separate from preview frames. Actual fps depends on capture, link and phone processing; no 30 fps claim is made.
+- Phone videos contain received preview frames, use phone monotonic arrival timing and are silent. They are not full-resolution native camera recordings. Recording is limited to two minutes / 128 MiB per clip, with a 256 MiB folder-size check before starting another capture and free-space checks. An in-progress clip can grow beyond that start threshold.
+- Keep ICE3 Capture visible while using live view/recording. Leaving the screen stops and finalizes recording. Locked-phone/background recording and endurance are not supported acceptance claims.
+- Traffic is authenticated but **not encrypted at the application layer**. Use a trusted private hotspot. A new session generates a new eight-digit pairing code and random 128-bit bearer token. Pairing attempts are rate limited. Capture pairing credentials are not built into either APK.
+- The camera is released after approximately ten seconds without a camera request. The glasses network service stays visibly active until Stop Capture is selected; stop it when finished to release its wake/Wi-Fi locks.
 
-The preferred phone integration extends the existing connection owner instead of opening a second set of competing Recon sockets. There are two local Snow3 checkouts with different history and remotes; select the intended checkout before implementation. Neither checkout was changed in this phase.
+## Build
 
-## Initial technical direction
+Use JDK 8, Android SDK Platform 16 and Build Tools 27.0.3. Configure `ANDROID_HOME` or pass `-Sdk`. The glasses build uses SDK tools directly and does not download Gradle dependencies.
 
-Use the existing Recon OBJECT/FILE Bluetooth paths for control and still images. Prefer a separately negotiated Wi-Fi media session for sustained video. The existing Jet Vision reports establish single-photo transfer and remote capture as useful prior work; they do not establish live-video bandwidth.
+```powershell
+.\run-checks.ps1
+.\build.ps1 -Mode Apk
+```
 
-On the old glasses firmware, display capture requires an explicit feasibility check. Android MediaProjection begins at API 21, and the standard screenrecord tool begins at API 19. Neither can be assumed available on the API 16 Jet baseline. The design includes a privileged/helper adapter and a separate PC-assisted diagnostic path; it does not claim that an ordinary APK can capture every other app.
+Development artifact: `dist/Recom3Capture-0.1.0-dev.apk`. The app is intentionally debuggable for the helper bootstrap and development probes. Do not distribute it as a production release. Its generated development keystore, build outputs and media are ignored.
 
-No cloud service is required by the proposed capture feature. Initial audio scope is silent video; microphone capture is a later, separately tested capability.
+ICE3 implementation is maintained in a separate linked checkout under `.local/ice3`, branch `codex/capture-phone` in the existing Snow3 repository. It combines current Bluetooth reply fixes and the existing Jet Vision/App Actions modifications. The original Snow3 checkouts are not switched or edited. An integration patch and checkout details are provided under `companion/`.
 
-## Preparation documents
+```powershell
+# From the linked ICE3 checkout, using its existing JDK 8 / Gradle 4.1 toolchain:
+.\gradlew.bat --offline :app:assembleDebug :app:testDebugUnitTest
+```
 
-- [Architecture and feasibility](docs/architecture.md)
-- [Draft command and media contract](docs/protocol.md)
-- [Hardware validation plan](docs/hardware-validation.md)
-- [Implementation backlog and decisions](docs/backlog.md)
+Local delivery APK: `artifacts/ICE3-1.0.3-capture.1-debug.apk`. The previous installed ICE3 APK is backed up under `artifacts/fallback/`. Media, credentials and APKs are not committed.
 
-There is no build or installation procedure yet. After the user releases the devices, validate the display source and transport first, then implement and build the smallest supported feature set. A published repository and GitHub push have not been requested or performed.
+## Install and use
 
-## References
+Use explicit serials from `adb devices -l`; never select the first connected device automatically. Update the existing ICE3 package in place only after checking that the candidate signature matches. Do not uninstall it to work around a mismatch.
 
-- [Android MediaProjection API, added at API 21](https://developer.android.com/reference/android/media/projection/MediaProjection)
-- [Android ADB screenshot and screen recording tools](https://developer.android.com/tools/adb)
-- Local Jet Vision documentation and source, ReconCast framebuffer client, stock ReconCamera, Recon HUD connectivity code and archived ModLiveLiveServer were inspected; see architecture for specific relative locations and limitations.
+```powershell
+adb -s JET_SERIAL install -r dist/Recom3Capture-0.1.0-dev.apk
+adb -s PHONE_SERIAL install -r artifacts/ICE3-1.0.3-capture.1-debug.apk
+.\tools\start-helper.ps1 -Serial JET_SERIAL
+```
+
+1. Keep the glasses and phone on the same private network. Existing hotspot settings need not change.
+2. Open **Recom3 Capture** on the glasses. Note the glasses IPv4 address and pairing code.
+3. Open **ICE3 Capture** on the phone (also linked from Snow3 Vision). Enter the address without a port and the eight-digit code; tap **Connect glasses**.
+4. Select `screen` or `camera`, then capture a still, start live view or start recording. Stop recording before changing source. The phone stores completed media in its app-owned `Capture` folder; use **Saved captures** to view/share it.
+5. To capture another app from the glasses, select **Screenshot in 5 seconds**, return to the desired app, then retrieve it on the phone with **Get delayed glasses screenshot**.
+6. **Stop Capture** on the glasses stops the network service. The helper can be removed independently with `tools/stop-helper.ps1 -Serial JET_SERIAL`, or ends on reboot.
+
+The helper bootstrap uses private app storage and a shell-owned temporary directory with mode 0700. Keys are not passed as command-line arguments or printed. The startup script handles the legacy device's PTY/SIGHUP behavior explicitly.
+
+## Documents
+
+- [Implementation protocol](docs/protocol.md)
+- [Validation report](docs/validation.md)
+- [Initial architecture and future options](docs/architecture.md)
+- [Hardware test checklist](docs/hardware-validation.md)
+- [Backlog](docs/backlog.md)
+
+Official platform references: [MediaProjection API 21+](https://developer.android.com/reference/android/media/projection/MediaProjection) and [ADB screen capture tools](https://developer.android.com/tools/adb). This prototype implements neither MediaProjection nor the unavailable API 19 screenrecord tool on the glasses.

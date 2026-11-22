@@ -1,81 +1,49 @@
-# Draft capture contract
+# Implemented prototype protocol
 
-Design version 0.1. This document proposes semantics; there is no implemented parser or interoperable endpoint yet.
+Version 1, local Wi-Fi HTTP, port 18884. No Recon Bluetooth control/media adapter is implemented in this prototype. Existing ICE3 Bluetooth owners and cloud Vision messages are unchanged.
 
-## Control transport
+## Pairing and authentication
 
-Use Recon OBJECT for small UTF-8 JSON commands and status inside its existing envelope. Use a dedicated capture intent/action namespace. Do not invent replacement Recon service UUIDs or alter the original framing. Still-image bytes use Recon FILE with the existing GZIP handling, as in the separate Jet Vision implementation.
+The explicitly started glasses service generates a random eight-digit pairing code and an independent 128-bit bearer token. `POST /pair` accepts the code as an eight-byte text body and returns a JSON token on success. Eight rejected attempts in a minute block further pairing until the window expires. Restarting the glasses service invalidates the old token/code.
 
-Proposed action namespace: `com.recom3.capture.CONTROL`, `com.recom3.capture.EVENT` and `com.recom3.capture.MEDIA`. Exact registration must be checked against both firmware and the selected phone checkout.
+All other requests require `Authorization: Bearer TOKEN`. Codes/tokens are not included in URLs. Cleartext HTTP is limited to a trusted private hotspot deployment; the current prototype does not implement TLS. The phone UI communicates that constraint before pairing.
 
-Every command carries `protocolVersion`, `sessionId`, `requestId` and `command`. Request IDs are random UUIDs. A session is explicitly opened by the user; reconnect establishes a new session and invalidates outstanding capture work. Do not treat a sender string in a legacy broadcast as cryptographic authentication.
+## Endpoints
 
-Example request:
-
-```json
-{
-  "protocolVersion": 1,
-  "sessionId": "11111111-1111-4111-8111-111111111111",
-  "requestId": "22222222-2222-4222-8222-222222222222",
-  "command": "capture.once",
-  "source": "screen",
-  "delayMs": 3000
-}
-```
-
-The IDs above are synthetic examples. A command acknowledgement means accepted or rejected, not captured, transferred or saved.
-
-## Commands
-
-| Command | Meaning |
+| Method and path | Result |
 | --- | --- |
-| `capabilities.get` | Query model/API, independently probed sources, formats, transports and limits |
-| `capture.once` | One camera photo or screen image, with optional bounded delay |
-| `live.start` / `live.stop` | Start/stop the selected source and negotiated live transport |
-| `record.start` / `record.stop` | Start/stop a recording with explicit recording location and source |
-| `request.cancel` | Cancel one pending request, including delayed capture |
-| `session.close` | Release capture resources owned by this feature |
+| `POST /pair` | `{ "token": "..." }`, or 401/429 |
+| `GET /status` | Independent `screen` and `camera` booleans and `protocol: 1` |
+| `GET /frame?source=screen` | Latest requested display JPEG, obtained through the local helper |
+| `GET /frame?source=camera` | Camera preview JPEG, initially 320 x 240 |
+| `POST /photo?source=screen` | PNG screenshot of the current foreground glasses display |
+| `POST /photo?source=camera` | One full camera JPEG, followed by preview restart |
+| `GET /last-screen` | The locally stored delayed screenshot, if one exists |
 
-A display recording requests live frames and phone-side recording. A camera recording may use glasses-local MediaRecorder with transfer after finalization. The acknowledgement must identify the actual location; do not imply a phone recording exists merely because the glasses started recording locally.
+Responses use Content-Length, Cache-Control: no-store and Connection: close. Frames are individually requested; there is no MJPEG connection, chunked upload, H.264 network stream or automatic reconnection. A successfully received still is saved before the phone reports Saved. Completed videos are renamed from `.partial` to `.mp4` only after muxer finalization.
 
-## Capabilities and state
+The phone requests live frames with a 200 ms delay after each completed iteration. Capture, transfer, decode and encode costs reduce the delivered rate. Camera JPEG caching limits compression to roughly every 400 ms, so repeated requests can receive the same camera frame. Recordings preserve phone arrival timing, not a claimed glasses-to-phone latency measurement.
 
-Report separate statuses for `cameraPhoto`, `cameraLive`, `cameraRecord`, `screenStill`, `screenLive`, `screenRecord` and each transport. Use `available`, `unavailable` or `unprobed`, with a reason and actual supported limits. Supported source formats and transport availability are separate facts; an action is enabled only when its whole path is usable.
+## Bounds and concurrency
 
-Proposed lifecycle:
+- HTTP request lines: at most 4096 bytes; target: at most 1024 characters.
+- Headers: at most 8192 characters; duplicate headers, malformed Content-Length and Transfer-Encoding are rejected.
+- Request body: at most 4096 bytes. The only meaningful body is the pairing code.
+- Glasses HTTP workers: three, with six queued connections; connections time out.
+- Local helper frame: at most 1 MiB. Phone response: at most 1.5 MiB before decode; dimensions: at most 2048 x 2048.
+- One phone worker serializes photo/live/encoder work. The UI stops video before changing live source.
+- No automatic photo retry, capture on reconnect, cloud call or Bluetooth socket recreation.
 
-`DISCONNECTED -> CONNECTED -> PROBING -> READY -> STARTING -> ACTIVE -> STOPPING -> READY`
+Malformed or unavailable capture requests return a sanitized failure. A non-null result from the hidden Surface API is not treated as proof of display access: the helper also requires nonzero dimensions. The ordinary-app probe on the tested Jet returned a zero-sized unusable bitmap.
 
-Cancellation/failure emits a correlated terminal event and releases owned resources. Source, live-preview and recording state remain explicit even if represented within one session. A failed start must not show ACTIVE; a command write must not show delivery confirmed. Late events from a closed session are ignored.
+## Local display helper
 
-## Events and receipts
+The helper is explicitly started with the existing authorized ADB shell identity. It binds an Android abstract local socket named `recom3.capture.screen.v1`, not a network port. Its independent 128-bit bootstrap key is read from stdin from a temporary mode-0700 shell-owned directory; it is not embedded in argv or an APK.
 
-Emit correlated `accepted`, `rejected`, `capture.completed`, `media.received`, `media.saved`, `live.started`, `live.stopped`, `record.started`, `record.completed`, `cancelled` and `error` as applicable.
+For each local socket connection the app sends Java DataOutputStream `writeUTF(key)` followed by one byte: 0 for JPEG, 1 for PNG, 2 for helper shutdown. Successful image responses contain a positive big-endian 32-bit length and payload. Shutdown replies with length zero. Input deadlines and a frame-size bound apply. The key is private to the app/bootstrap and retained across service restarts.
 
-For still media, metadata includes the source, request ID, media ID, MIME type, byte count, dimensions, rotation, monotonic capture timestamp and SHA-256 of uncompressed file bytes. Verify content/size/dimensions/hash after receipt. `media.received` follows validation; `media.saved` follows durable local completion. No duplicate capture or duplicate gallery entry is created on redelivery. Do not delete the only saved copy based merely on an accepted command.
+The helper uses the existing Surface screenshot implementation under shell privileges. It does not alter permissions, replace firmware, install a system UID app, expose an arbitrary shell executor or enable network ADB. It must be restarted after reboot.
 
-Keep a bounded recent-request cache and cancellation tombstones. A cancel arriving before its media suppresses later processing. Expired requests are not replayed after reconnection.
+## Future protocol work
 
-## Provisional limits
-
-These are implementation proposals, not hardware specifications:
-
-- One pending still capture and one active media source per session.
-- Control JSON no larger than 8 KiB, nesting depth bounded, known command/field types only.
-- Maximum still JPEG/PNG: 1 MiB; maximum FILE envelope: 2 MiB, with decompression bound and existing framing checks.
-- Delay: 0-5 seconds. One-shot deadline: 30 seconds including the requested delay; expiry does not cause a retry.
-- At most one queued live frame; discard an obsolete frame rather than accumulating latency.
-- Initial live JPEG frame limit: 512 KiB, with dimensions capped by negotiation before allocation.
-- Live inactivity timeout, recording duration/size limits and clip-transfer chunks must be set after hardware measurements, before implementation is accepted.
-
-A large or unusually complex screenshot may exceed the still-image limit. Negotiate/downscale explicitly or return SIZE_LIMIT; do not truncate it or label it successful.
-
-## Live-media framing requirements
-
-Use a separate versioned media stream, not a stream of fake FILE photo requests. Require a bounded binary header containing session identity, source, frame sequence, payload length, dimensions/format, orientation and monotonic timestamp. Read partial headers/payloads correctly; reject oversized frames before allocating memory. Validate the session before accepting payloads. Negotiate endpoint authentication/encryption independently from this metadata contract.
-
-The final byte layout, TLS configuration and transport bootstrap are deliberately not frozen before API 16 interoperability and phone-network tests. Video payloads and still-image FILE GZIP framing must not be mixed accidentally.
-
-## Errors
-
-At minimum distinguish NOT_CONNECTED, BUSY, CAMERA_BUSY, CAMERA_UNAVAILABLE, SCREEN_CAPTURE_UNAVAILABLE, HELPER_REQUIRED, TRANSPORT_UNAVAILABLE, UNSUPPORTED_PROFILE, TIMEOUT, SIZE_LIMIT, STORAGE_FULL, CANCELLED and INTERNAL_ERROR. Show actionable text and retain only sanitized diagnostics. Never report a requested capability as working simply because a fallback path can capture the app's own UI.
+Recon OBJECT/FILE still-image fallback, capability limits per model, per-frame capture metadata, synchronized latency measurements, encrypted transport, multiple clients and correlated request/cancel identifiers are future work. They are not represented as implemented by this version number.

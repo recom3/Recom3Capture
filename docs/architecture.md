@@ -1,6 +1,6 @@
 # Capture architecture and feasibility
 
-Prepared 22 November 2026. All new behavior below is proposed, not implemented. Source findings are distinct from device validation.
+Initial design prepared 22 November 2026, retained for the broader architecture and future options. The first implemented prototype uses Wi-Fi HTTP for control/media, a shell-UID display helper, and phone-side MP4 encoding. README, protocol and validation documents describe current behavior; proposals below are not implementation or test claims.
 
 ## Evidence available before hardware access
 

@@ -1,48 +1,33 @@
 # Implementation backlog
 
-Prepared 22 November 2026. Planning is complete for this phase; implementation and device work are pending.
+Updated 22 November 2026. Initial Jet/Pixel prototype implemented; Snow2 and unlocked-phone UI acceptance remain pending.
 
-## Stage 0: prepared offline
+## Completed
 
-- [x] Confirm a new application name/directory does not already exist.
-- [x] Inspect Jet photo/control references, phone project identities and display-capture precedents.
-- [x] Record the API/permission constraints and separate camera from display behavior.
-- [x] Draft component boundaries, control semantics, media requirements and hardware acceptance gates.
-- [x] Keep glasses, current applications, existing companion checkouts and network settings untouched.
+- [x] Separate API 16 glasses APK and independent camera/display sources.
+- [x] Demonstrate ordinary-app display denial and explicitly started shell-UID display helper.
+- [x] Native ICE3 Capture entry with pairing, independent capabilities, live view and saved-media sharing/history.
+- [x] Combine current Snow3 Bluetooth fixes with the existing Jet Vision/App Actions modifications in an isolated checkout.
+- [x] Preserve previous installed ICE3 APK, verify matching signature and update the phone without clearing data.
+- [x] Real Jet camera photograph, camera preview and screenshot of another foreground application.
+- [x] Pixel-direct Wi-Fi reception and silent phone MP4 recording for both camera and display.
+- [x] Inspect decoded phone video frames and complete-file decode.
+- [x] API 16 build/signature checks, 18 HTTP bounds/framing assertions and 123 existing ICE3 regression tests.
+- [x] Helper start/stop and private bootstrap scripts; no root, firmware changes or network ADB.
 
-## Stage 1: feasibility after hardware release
+## Remaining acceptance
 
-- [ ] Choose the active ICE3/Snow3 checkout and preserve existing local work.
-- [ ] Probe ordinary-app display access on Jet and Snow2.
-- [ ] Decide whether an optional helper is necessary and how it is started/stopped after reboot.
-- [ ] Measure Bluetooth and Wi-Fi capacity and check concurrent app/network requirements.
-- [ ] Freeze the smallest supported capability matrix before implementing the UI.
+- [ ] Unlocked-phone manual UI: pairing, photo, live/stop, record/stop, source switching, saved-media viewer/share.
+- [x] Glasses delayed screenshot and display recording while navigating Settings sections on the final build.
+- [ ] Test Snow2 hardware independently, including display privileges, dimensions, Wi-Fi and no-camera behavior.
+- [ ] Short-run failure tests and longer battery/thermal/network/coexistence tests before broader use.
 
-## Stage 2: first useful build
+## Later improvements
 
-- [ ] Separate API 16 glasses APK with directional HUD controls and negotiated capability state.
-- [ ] ICE3 Capture entry using its existing Bluetooth service and explicit foreground session.
-- [ ] Jet photo capture, transfer, receipt and local phone gallery.
-- [ ] Phone-triggered screenshot and delayed glasses screenshot when the display gate passes.
-- [ ] Meaningful host tests for framing bounds, split/coalesced delivery, duplicate/cancel ordering and state transitions.
-- [ ] APK/build checks and physical still-image acceptance on each supported model.
+- [ ] Higher delivered fps and hardware H.264 streaming, if supported and measured.
+- [ ] Recon OBJECT/FILE Bluetooth still-photo/control fallback.
+- [ ] Encrypted transport compatible with API 16; per-frame capture timestamps and measured latency.
+- [ ] Full-resolution glasses-local MediaRecorder clips, audio and background/locked-phone recording as separate capabilities.
+- [ ] Installation/helper startup integration with Uplink after the prototype is accepted.
 
-## Stage 3: live view and recording
-
-- [ ] Implement negotiated/authenticated media framing with bounded queues and timeouts.
-- [ ] Camera live view with supported dimensions and measured defaults.
-- [ ] Display live view and phone-side display-video encoder.
-- [ ] Camera MediaRecorder clips and completed-file transfer.
-- [ ] Stop/failure/storage recovery and playable-file verification.
-- [ ] Physical performance, background lifecycle, companion regression and endurance checks.
-
-## Decisions still requiring evidence
-
-- Whether phone-only display capture is possible without a privileged helper.
-- Which Snow3/Ice3 checkout should receive the feature; label, package and repository names differ.
-- Which Wi-Fi network role coexists with current glasses apps and the phone.
-- Whether JPEG live view is sufficient or an API 16 hardware/native H.264 path is worth the additional complexity.
-- Exact supported profiles, recording limits and defaults for each physical unit.
-- Whether a later standalone companion is useful; the current preference is an ICE3 feature to avoid competing Recon connections.
-
-No clarification is required before these offline design documents can be reviewed. Do not publish, push, install candidates or touch the occupied glasses as part of this preparation.
+No GitHub repository creation or push is authorized by this work. Initial architecture proposals remain documented separately from implemented behavior.

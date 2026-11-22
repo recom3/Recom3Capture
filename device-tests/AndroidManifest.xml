@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.recom3.snow3">
+    <instrumentation android:name="com.recom3.capturetests.CaptureInstrumentation" android:targetPackage="com.recom3.snow3" android:label="Capture development verification" />
+</manifest>
