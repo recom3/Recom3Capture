@@ -34,7 +34,7 @@ These are short backend acceptance runs using the production HTTP sources and ph
 
 The Pixel was protected by its fingerprint lock during UI testing. An unlocked-phone review of the normal buttons/gallery remains pending. No lock credential was entered or security setting changed.
 
-The successful checks use instrumentation bundled only in the ICE3 debug source set, from the checked-in `device-tests` source. A standalone verification APK installation remained pending, so the supported test route updates the already authorized development ICE3 package and preserves normal platform verification. Backend verification is not a manual UI test. Temporary stills are named `validation-screen` / `validation-camera`; resulting MP4s remain local.
+The successful checks use instrumentation bundled only in the ICE3 debug source set, from the checked-in `device-tests` source. The two standalone verification APK install sessions were identified by shell ownership, exact APK size and creation timestamps and explicitly abandoned, so the supported test route updates the already authorized development ICE3 package and preserves normal platform verification. Backend verification is not a manual UI test. Temporary stills are named `validation-screen` / `validation-camera`; resulting MP4s remain local.
 
 ## Evidence
 
@@ -47,3 +47,5 @@ The probe bootstrap initially encountered the legacy device's PTY echo/EOF behav
 Snow2 was not connected and is not validated. Long sessions, heat/battery measurements, camera/audio concurrency, Android Auto coexistence, Bluetooth-only delivery, locked/background phone recording, microphone/internal audio, encrypted transport and full-resolution glasses-local camera clips are not demonstrated. The first release remains a private development prototype.
 
 ICE3 feature source is saved locally at merge commit 4611a82 on codex/capture-phone; documentation was clarified in 3c02ac5. Its patch round-trip check passed. No source was pushed or repository published.
+
+Final cleanup removed the development-PC media forward and temporary probe/install files. The installed Pixel APK hash matches the local delivery APK exactly. Both app screens were opened for the user; the normal phone UI review still requires unlocking the Pixel.
