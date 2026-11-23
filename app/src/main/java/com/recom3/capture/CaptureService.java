@@ -2,6 +2,8 @@ package com.recom3.capture;
 
 import android.app.*;
 import android.content.*;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.net.*;
 import android.net.wifi.*;
 import android.os.*;
@@ -9,6 +11,7 @@ import java.io.*;
 import java.net.*;
 import java.security.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.json.*;
 
 public final class CaptureService extends Service {
@@ -18,6 +21,11 @@ public final class CaptureService extends Service {
     volatile String code, address="", lastError=""; private int failures; private long failureStart;
     private final Handler handler = new Handler();
     private final ExecutorService workers = new ThreadPoolExecutor(3,3,0,TimeUnit.SECONDS,new ArrayBlockingQueue<Runnable>(6));
+    volatile String displayState="Checking screen access";
+    volatile boolean displayReady;
+    private volatile boolean stopping;
+    private final AtomicBoolean activatingDisplay=new AtomicBoolean();
+    private final ExecutorService displayWorker=Executors.newSingleThreadExecutor();
     private PowerManager.WakeLock wake;
     private WifiManager.WifiLock wifi;
     static String randomHex() {byte[] b=new byte[16];new SecureRandom().nextBytes(b);StringBuilder s=new StringBuilder();for(byte v:b)s.append(String.format(java.util.Locale.US,"%02x",v&255));return s.toString();}
@@ -39,11 +47,91 @@ public final class CaptureService extends Service {
             address=wifiAddress();
             new Thread(new Runnable(){public void run(){accept();}},"capture-http").start();
             handler.postDelayed(maintenance,5000);
+            activateDisplay(getSharedPreferences("screen",MODE_PRIVATE).getBoolean("start_on_open",false));
         } catch(Exception e){lastError=e.getClass().getSimpleName();stopSelf();}
     }
-    private final Runnable maintenance=new Runnable(){public void run(){if(camera!=null)camera.idle();address=wifiAddress();handler.postDelayed(this,5000);}};
+    private final Runnable maintenance=new Runnable(){public void run(){if(camera!=null)camera.idle();address=wifiAddress();if(!displayReady)activateDisplay(false);handler.postDelayed(this,5000);}};
     private String wifiAddress(){int ip=((WifiManager)getSystemService(WIFI_SERVICE)).getConnectionInfo().getIpAddress();return (ip&255)+"."+((ip>>8)&255)+"."+((ip>>16)&255)+"."+((ip>>24)&255);}
+    boolean displayStarting(){return activatingDisplay.get();}
+
+    /** Serialized on its own worker so a root prompt cannot block HTTP/camera requests or the UI. */
+    public void activateDisplay(final boolean allowExistingRoot) {
+        if(stopping || !activatingDisplay.compareAndSet(false,true)) return;
+        try {
+            displayWorker.execute(new Runnable(){public void run(){
+                java.lang.Process client=null;
+                try {
+                    if(probeDisplay()){displayState="Screen ready";return;}
+                    if(!allowExistingRoot){displayState="Screen needs activation or PC setup";return;}
+                    String su=null;
+                    for(String path:new String[]{"/system/xbin/su","/system/bin/su"}){
+                        if(new File(path).canExecute()){su=path;break;}
+                    }
+                    if(su==null){displayState="No system access: PC setup required";return;}
+                    displayState="Waiting for root approval (30 seconds)";
+                    String command=HelperLaunch.command(getPackageCodePath(),new File(getFilesDir(),"helper.auth").getAbsolutePath());
+                    client=new ProcessBuilder(su,"-c",command).start();
+                    client.getOutputStream().close();
+                    // The fixed command redirects helper I/O, including its key, away from these pipes.
+                    if(HelperLaunch.awaitExit(client,30000)!=0){
+                        displayState="Root start failed: PC setup required";return;
+                    }
+                    long deadline=SystemClock.elapsedRealtime()+8000;
+                    while(!stopping && SystemClock.elapsedRealtime()<deadline){
+                        if(probeDisplay()){
+                            if(stopping)return;
+                            getSharedPreferences("screen",MODE_PRIVATE).edit().putBoolean("start_on_open",true).commit();
+                            displayState="Screen ready; enabled on app launch";return;
+                        }
+                        Thread.sleep(250);
+                    }
+                    displayState="Screen unavailable: use PC setup";
+                } catch(InterruptedException interrupted){
+                    Thread.currentThread().interrupt();
+                } catch(Exception failed){
+                    displayState="Screen activation failed: use PC setup";
+                } finally {
+                    if(client!=null){
+                        client.destroy();
+                        try{client.getInputStream().close();}catch(IOException ignored){}
+                        try{client.getErrorStream().close();}catch(IOException ignored){}
+                    }
+                    activatingDisplay.set(false);
+                }
+            }});
+        } catch(RejectedExecutionException stopped){activatingDisplay.set(false);}
+    }
+
+    private boolean probeDisplay(){
+        if(stopping)return false;
+        try{screen(false);return true;}catch(Exception unavailable){return false;}
+    }
+
     public byte[] screen(boolean png) throws Exception {
+        try {
+            byte[] bytes;
+            if(checkCallingOrSelfPermission("android.permission.READ_FRAME_BUFFER")==PackageManager.PERMISSION_GRANTED){
+                try{bytes=directScreen(png);}
+                catch(Exception directUnavailable){bytes=helperScreen(png);}
+            } else bytes=helperScreen(png);
+            displayReady=true;
+            if(!activatingDisplay.get())displayState="Screen ready";
+            return bytes;
+        } catch(Exception unavailable){displayReady=false;throw unavailable;}
+    }
+
+    private byte[] directScreen(boolean png) throws Exception {
+        Bitmap image=ScreenHelper.screenshot();
+        ByteArrayOutputStream output=new ByteArrayOutputStream();
+        try{
+            if(!image.compress(png?Bitmap.CompressFormat.PNG:Bitmap.CompressFormat.JPEG,png?100:75,output))
+                throw new IOException("Display encoding failed");
+        } finally{image.recycle();}
+        byte[] bytes=output.toByteArray();
+        if(bytes.length<1||bytes.length>1048576)throw new IOException("Invalid display frame");
+        return bytes;
+    }
+    private byte[] helperScreen(boolean png) throws Exception {
         LocalSocket socket=new LocalSocket();
         try{socket.connect(new LocalSocketAddress(ScreenHelper.SOCKET));socket.setSoTimeout(5000);
             DataOutputStream out=new DataOutputStream(socket.getOutputStream());out.writeUTF(helperKey);out.writeByte(png?1:0);out.flush();
@@ -77,5 +165,5 @@ public final class CaptureService extends Service {
     }
     @Override public int onStartCommand(Intent intent,int flags,int id){return START_NOT_STICKY;}
     @Override public IBinder onBind(Intent intent){return null;}
-    @Override public void onDestroy(){current=null;handler.removeCallbacksAndMessages(null);try{if(server!=null)server.close();}catch(IOException ignored){}workers.shutdownNow();if(camera!=null)camera.close();if(wifi!=null&&wifi.isHeld())wifi.release();if(wake!=null&&wake.isHeld())wake.release();stopForeground(true);super.onDestroy();}
+    @Override public void onDestroy(){stopping=true;displayWorker.shutdownNow();current=null;handler.removeCallbacksAndMessages(null);try{if(server!=null)server.close();}catch(IOException ignored){}workers.shutdownNow();if(camera!=null)camera.close();if(wifi!=null&&wifi.isHeld())wifi.release();if(wake!=null&&wake.isHeld())wake.release();stopForeground(true);super.onDestroy();}
 }

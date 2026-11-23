@@ -38,11 +38,11 @@ Malformed or unavailable capture requests return a sanitized failure. A non-null
 
 ## Local display helper
 
-The helper is explicitly started with the existing authorized ADB shell identity. It binds an Android abstract local socket named `recom3.capture.screen.v1`, not a network port. Its independent 128-bit bootstrap key is read from stdin from a temporary mode-0700 shell-owned directory; it is not embedded in argv or an APK.
+The helper can be started with the existing authorized ADB shell identity. Version 0.1.1 can also start it through existing root access after explicit in-app confirmation; normal apps cannot create this access. The launcher reads its key directly from the app-private file. Successful root activation can be remembered for subsequent app launches. An existing system-permission installation can instead capture directly. It binds an Android abstract local socket named `recom3.capture.screen.v1`, not a network port. Its independent 128-bit bootstrap key is read from stdin from a temporary mode-0700 shell-owned directory; it is not embedded in argv or an APK.
 
 For each local socket connection the app sends Java DataOutputStream `writeUTF(key)` followed by one byte: 0 for JPEG, 1 for PNG, 2 for helper shutdown. Successful image responses contain a positive big-endian 32-bit length and payload. Shutdown replies with length zero. Input deadlines and a frame-size bound apply. The key is private to the app/bootstrap and retained across service restarts.
 
-The helper uses the existing Surface screenshot implementation under shell privileges. It does not alter permissions, replace firmware, install a system UID app, expose an arbitrary shell executor or enable network ADB. It must be restarted after reboot.
+The helper uses the existing Surface screenshot implementation under shell or root privileges. It does not alter permissions, replace firmware, install a system UID app, expose an arbitrary shell executor or enable network ADB. It must be restarted after reboot through existing root access or the authorized PC fallback. No HTTP endpoint requests root activation.
 
 ## Future protocol work
 

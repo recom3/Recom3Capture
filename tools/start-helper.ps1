@@ -10,11 +10,12 @@ if($key -notmatch '^[a-f0-9]{32}$'){throw 'Private helper bootstrap key unavaila
 $packagePath=((& $Adb -s $Serial shell pm path com.recom3.capture) -join '').Trim().Replace('package:','')
 if($packagePath -notmatch '^/[A-Za-z0-9/._-]+$'){throw 'Invalid package path.'}
 & $Adb -s $Serial shell 'mkdir -p /data/local/tmp/recom3-capture; chmod 700 /data/local/tmp/recom3-capture'
+New-Item -ItemType Directory -Force -Path (Join-Path $PSScriptRoot '../.local') | Out-Null
 $bootstrapFile=Join-Path $PSScriptRoot '../.local/bootstrap.key'
-[IO.File]::WriteAllText($bootstrapFile,$key+"`n",(New-Object Text.UTF8Encoding($false)))
-& $Adb -s $Serial push $bootstrapFile /data/local/tmp/recom3-capture/bootstrap.key
-if($LASTEXITCODE -ne 0){throw 'Cannot provision helper key.'}
 try {
+    [IO.File]::WriteAllText($bootstrapFile,$key+"`n",(New-Object Text.UTF8Encoding($false)))
+    & $Adb -s $Serial push $bootstrapFile /data/local/tmp/recom3-capture/bootstrap.key
+    if($LASTEXITCODE -ne 0){throw 'Cannot provision helper key.'}
     & $Adb -s $Serial shell "trap '' HUP; CLASSPATH=$packagePath app_process /system/bin com.recom3.capture.ScreenHelper < /data/local/tmp/recom3-capture/bootstrap.key > /data/local/tmp/recom3-capture-helper.log 2>&1 &"
     Start-Sleep -Milliseconds 2500
     $socketPresent=& $Adb -s $Serial shell cat /proc/net/unix

@@ -53,7 +53,7 @@ try {
         if ($Keystore) {
             if (-not $KeyAlias) { throw 'Pass -KeyAlias with -Keystore.' }
             $signingKey = (Resolve-Path -LiteralPath $Keystore).ProviderPath
-            $apk = 'dist/Recom3Capture-0.1.0.apk'
+            $apk = 'dist/Recom3Capture-0.1.1.apk'
             # apksigner prompts for credentials; passwords are never stored in project files.
             Invoke-Tool "$tools/apksigner.bat" @('sign', '--ks', $signingKey, '--ks-key-alias', $KeyAlias,
                 '--min-sdk-version', '16', '--v1-signing-enabled', 'true', '--v2-signing-enabled', 'false',
@@ -67,7 +67,7 @@ try {
                     '-dname', 'CN=Recom3 Development,O=Recom3,C=ES', '-keyalg', 'RSA',
                     '-keysize', '2048', '-validity', '10000', '-sigalg', 'SHA256withRSA')
             }
-            $apk = 'dist/Recom3Capture-0.1.0-dev.apk'
+            $apk = 'dist/Recom3Capture-0.1.1-dev.apk'
             Invoke-Tool "$tools/apksigner.bat" @('sign', '--ks', $signingKey, '--ks-key-alias', 'development',
                 '--ks-pass', 'pass:android', '--key-pass', 'pass:android', '--min-sdk-version', '16',
                 '--v1-signing-enabled', 'true', '--v2-signing-enabled', 'false', '--out', $apk, 'build/aligned.apk')

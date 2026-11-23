@@ -30,4 +30,12 @@ Updated 22 November 2026. Initial Jet/Pixel prototype implemented and normal unl
 - [ ] Full-resolution glasses-local MediaRecorder clips, audio and background/locked-phone recording as separate capabilities.
 - [ ] Installation/helper startup integration with Uplink after the prototype is accepted.
 
-No GitHub repository creation or push is authorized by this work. Initial architecture proposals remain documented separately from implemented behavior.
+The 0.1.1 helper activation and launcher icon are proposed in a separate pull request. Physical verification of system/root activation remains pending. Initial architecture proposals remain documented separately from implemented behavior.
+## Version 0.1.1
+
+- [x] Add Capture launcher icons at API 16-compatible densities.
+- [x] Expose screen readiness and activation with existing system/root access.
+- [x] Remember successful root activation for app launches, with a disable control.
+- [x] Preserve the authorized PC bootstrap and HTTP/local-socket protocols.
+- [ ] Validate UI, root approval/denial, restart and cancellation on actual glasses.
+- [ ] Establish a supported permanent privilege installation for ordinary unprivileged glasses; a button alone cannot provide it.
