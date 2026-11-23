@@ -29,6 +29,34 @@ The fixed root-launch command contains only validated app paths and the helper e
 
 The new system-permission/root paths and revised UI still require real Jet/Snow2 validation. Earlier PC-helper results do not establish that these new paths passed.
 
+## PC activation with ADB and a Windows shortcut
+
+**Important: on ordinary Jet/Snow2 installations without system/root screen access, opening Recom3Capture does not activate display capture. Run PC activation again after every glasses reboot. Camera capture does not require this step.**
+
+Connect the glasses to the PC by USB, authorize USB debugging and identify their serial:
+
+```powershell
+adb devices -l
+```
+
+Run this command, replacing the example installation paths and `JET_SERIAL` with your own values:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Recom3Capture\tools\start-helper.ps1" -Serial "JET_SERIAL" -Adb "C:\Android\Sdk\platform-tools\adb.exe"
+```
+
+For a desktop shortcut, create a Windows shortcut and paste that same complete command into **Target**. Name it **Activate Jet screen capture**. Run it while the glasses are connected. The script opens the glasses app, provisions the private helper key, launches the helper and checks that its local socket is present. It also works from a fresh checkout without first building the APK, provided the compatible debuggable APK is already installed on the glasses.
+
+After successful startup, disconnect USB, open Workout or another glasses app, then reconnect from ICE3 Capture on the Pixel so **Screen** appears among the sources. The helper stays on the glasses while switching apps and disconnecting the PC; it ends on glasses reboot or explicit helper shutdown. The PC is not used to receive or encode the phone's captures.
+
+For reference, the script's actual ADB launch is:
+
+```powershell
+adb -s JET_SERIAL shell "trap '' HUP; CLASSPATH=APK_PATH app_process /system/bin com.recom3.capture.ScreenHelper < /data/local/tmp/recom3-capture/bootstrap.key > /data/local/tmp/recom3-capture-helper.log 2>&1 &"
+```
+
+That raw launch is not a standalone setup command: `APK_PATH` must be resolved and the private bootstrap file securely provisioned first. Use `start-helper.ps1` for normal activation; it handles those steps, the legacy PTY behavior and temporary-key cleanup. Never paste a bootstrap-key value into an ADB command or README.
+
 ## Compatibility and limits
 
 - Glasses: API 16 framework APIs; tested hardware is the original Recon Jet, Android 4.1.2. Snow2 is an intended target and has not been connected for this project. Camera use is conditional on actual camera presence.

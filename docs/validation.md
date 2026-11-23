@@ -74,3 +74,5 @@ New checks for this change:
 The new root/system-permission activation path, remembered startup, disable control and scrollable glasses UI have **not** been tested on physical Jet or Snow2 hardware. No glasses were connected while preparing this change. No firmware, system permissions, root installation or phone app was modified. Existing PC-helper hardware results above belong to 0.1.0 and do not validate these new privileged paths.
 
 The PR also carries the previously prepared local RIF packaging/artwork commit. Only original generated artwork is committed; APKs, RIFs, keys and real captured media remain ignored.
+
+PC shortcut documentation follow-up: PowerShell parsing passed. An isolated temporary-copy test with a mocked ADB command verified invalid-serial rejection before ADB, successful bootstrap, already-running reuse, failed-push handling, and removal of the temporary key on both success and push failure. These checks did not contact a device.
