@@ -1,6 +1,6 @@
 # Recom3Capture
 
-Native Recon Jet capture prototype with an **ICE3 Capture** feature in the existing phone companion. The glasses APK is `com.recom3.capture` 0.1.0; the phone APK updates `com.recom3.snow3` to 1.0.3-capture.1 / code 4.
+Native Recon Jet capture prototype with an **ICE3 Capture** feature in the existing phone companion. The glasses APK is `com.recom3.capture` 0.1.1; the phone APK updates `com.recom3.snow3` to 1.0.3 / code 5.
 
 ## Features
 
@@ -15,11 +15,25 @@ The first prototype uses authenticated local HTTP over Wi-Fi for both control an
 
 See [validation results and limitations](docs/validation.md) for the exact tested paths. Source implementation is not proof that every feature or model has passed hardware validation.
 
+## Screen activation in 0.1.1
+
+The glasses launcher and application now use the original Capture artwork instead of Android's default robot. Open **Recom3 Capture** to see the address, code and separate screen status. Its foreground network service already stays active when returning to other apps.
+
+**Activate screen capture** first checks real display access. An already granted `READ_FRAME_BUFFER` system permission allows direct capture. Otherwise it reuses the authenticated local helper or can request an already installed, compatible `su -c` implementation to start it. Explicit confirmation and the existing root manager's approval are required where applicable.
+
+Only a successful root activation remembers **start on app launch**. Use **Disable auto-start** in the activation dialog to forget that preference; the current session is unchanged. Activation runs on a separate worker, with a 30-second root-approval deadline and a bounded readiness check. Success requires an actual non-empty frame, not just a process exit code. Probes remain in memory and are not saved or uploaded.
+
+**On normal unprivileged glasses, the button cannot create screen permission or root access. PC setup is still required after a reboot.** Camera capture remains independent. Once the glasses show **Screen ready**, return to Workout or another app and reconnect from ICE3 to refresh its available sources.
+
+The fixed root-launch command contains only validated app paths and the helper entry point. Its key is read from the app-private file through stdin, never embedded in argv. No arbitrary shell command is exposed to the phone. **Stop Capture** releases the network service and its locks; independent helper shutdown remains available through the existing stop script or a glasses reboot.
+
+The new system-permission/root paths and revised UI still require real Jet/Snow2 validation. Earlier PC-helper results do not establish that these new paths passed.
+
 ## Compatibility and limits
 
 - Glasses: API 16 framework APIs; tested hardware is the original Recon Jet, Android 4.1.2. Snow2 is an intended target and has not been connected for this project. Camera use is conditional on actual camera presence.
-- Display capture needs the optional **shell-UID helper**, started explicitly from an authorized PC. A normal app cannot capture the display on the tested firmware. No root, platform signing, global permission changes, system APK replacement or network ADB are used.
-- The helper runs locally on the glasses. After startup, capture uses Wi-Fi; a reboot requires starting the helper again from the PC. Starting it does not create a permanent privileged installation.
+- Display capture needs existing system permission or an authenticated privileged helper. The new activation control supports already installed, compatible root access. Ordinary unprivileged glasses still need authorized PC setup. The app does not install root, alter firmware/global permissions, replace system APKs or enable network ADB.
+- The helper runs locally on the glasses and remains resident while using other apps. After a reboot it needs restarting, either through remembered in-app activation using existing root access or from the PC. Starting it does not create a permanent privileged installation.
 - Initial camera live frames are 320 x 240; display frames are 428 x 240. Full-resolution still photos are separate from preview frames. Actual fps depends on capture, link and phone processing; no 30 fps claim is made.
 - Phone videos contain received preview frames, use phone monotonic arrival timing and are silent. They are not full-resolution native camera recordings. Recording is limited to two minutes / 128 MiB per clip, with a 256 MiB folder-size check before starting another capture and free-space checks. An in-progress clip can grow beyond that start threshold.
 - Keep ICE3 Capture visible while using live view/recording. Leaving the screen stops and finalizes recording. Locked-phone/background recording and endurance are not supported acceptance claims.
@@ -35,24 +49,24 @@ Use JDK 8, Android SDK Platform 16 and Build Tools 27.0.3. Configure `ANDROID_HO
 .\build.ps1 -Mode Apk
 ```
 
-Development artifact: `dist/Recom3Capture-0.1.0-dev.apk`. The app is intentionally debuggable for the helper bootstrap and development probes. Do not distribute it as a production release. Its generated development keystore, build outputs and media are ignored.
+Development artifact: `dist/Recom3Capture-0.1.1-dev.apk`. The app is intentionally debuggable for the helper bootstrap and development probes. Do not distribute it as a production release. Its generated development keystore, build outputs and media are ignored.
 
-ICE3 implementation is maintained in a separate linked checkout under `.local/ice3`, branch `codex/capture-phone` in the existing Snow3 repository. It combines current Bluetooth reply fixes and the existing Jet Vision/App Actions modifications. The original Snow3 checkouts are not switched or edited. An integration patch and checkout details are provided under `companion/`.
+The current phone integration is maintained in [ICE3/Snow3](https://github.com/recom3/snow3), version 1.0.3 / code 5. It includes the Capture tab and direct shortcut in the same package. The linked prototype checkout and patch under `companion/` record the earlier implementation.
 
 ```powershell
 # From the linked ICE3 checkout, using its existing JDK 8 / Gradle 4.1 toolchain:
 .\gradlew.bat --offline :app:assembleDebug :app:testDebugUnitTest
 ```
 
-Local delivery APK: `artifacts/ICE3-1.0.3-capture.1-debug.apk`. The previous installed ICE3 APK is backed up under `artifacts/fallback/`. Media, credentials and APKs are not committed.
+Local delivery APK: `artifacts/ICE3-1.0.3-debug.apk`. The previous installed ICE3 APK is backed up under `artifacts/fallback/`. Media, credentials and APKs are not committed.
 
 ## Install and use
 
 Use explicit serials from `adb devices -l`; never select the first connected device automatically. Update the existing ICE3 package in place only after checking that the candidate signature matches. Do not uninstall it to work around a mismatch.
 
 ```powershell
-adb -s JET_SERIAL install -r dist/Recom3Capture-0.1.0-dev.apk
-adb -s PHONE_SERIAL install -r artifacts/ICE3-1.0.3-capture.1-debug.apk
+adb -s JET_SERIAL install -r dist/Recom3Capture-0.1.1-dev.apk
+adb -s PHONE_SERIAL install -r artifacts/ICE3-1.0.3-debug.apk
 .\tools\start-helper.ps1 -Serial JET_SERIAL
 ```
 
@@ -79,10 +93,10 @@ Package with the existing trusted local RIF utility:
 # Build the glasses APK first, then package it:
 .\package.ps1 -RifTool 'C:\Tools\PrepRecom3Rif.jar'
 # Wrap another already signed APK:
-.\package.ps1 -RifTool 'C:\Tools\PrepRecom3Rif.jar' -SkipBuild -Apk '.\dist\Recom3Capture-0.1.0.apk'
+.\package.ps1 -RifTool 'C:\Tools\PrepRecom3Rif.jar' -SkipBuild -Apk '.\dist\Recom3Capture-0.1.1.apk'
 ```
 
-The packaging script decodes a disposable copy and verifies that its SHA-256 matches the input APK. It checks the PNG signature and exact dimensions and writes `dist/SHA256SUMS.txt`. The external RIF utility is not redistributed. The delivered RIF contains the existing development-signed 0.1.0 APK and does not bundle the phone companion or start the display helper automatically. Existing installation and helper requirements still apply.
+The packaging script decodes a disposable copy and verifies that its SHA-256 matches the input APK. It checks the PNG signature and exact dimensions and writes `dist/SHA256SUMS.txt`. The external RIF utility is not redistributed. The delivered RIF contains the development-signed 0.1.1 APK and does not bundle the phone companion or grant display privileges. The app can restart the helper only with existing privileged access as described above.
 
 Editable icon artwork is `assets/capture.svg`; the generated PNG is checked in so packaging does not require an image renderer. To regenerate it, install ImageMagick and run `tools/generate-thumbnail.ps1`. APKs, RIF outputs, captured media and signing keys remain outside Git. This packaging step does not install or publish anything.
 
@@ -95,3 +109,7 @@ Editable icon artwork is `assets/capture.svg`; the generated PNG is checked in s
 - [Backlog](docs/backlog.md)
 
 Official platform references: [MediaProjection API 21+](https://developer.android.com/reference/android/media/projection/MediaProjection) and [ADB screen capture tools](https://developer.android.com/tools/adb). This prototype implements neither MediaProjection nor the unavailable API 19 screenrecord tool on the glasses.
+
+Version 0.1.1 also packages 36/48/72/96px launcher PNGs generated from the same SVG. Regenerate those with `tools/generate-app-icons.ps1`. The actual manifest points both the application and launcher activity to this icon. No captured image is used by either icon.
+
+Saved phone media is available through **Saved captures** and **Share**, under `Android/data/com.recom3.snow3/files/Capture/`.

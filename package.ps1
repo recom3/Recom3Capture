@@ -14,7 +14,7 @@ if ($Apk) { $Apk = (Resolve-Path -LiteralPath $Apk).ProviderPath }
 Push-Location $PSScriptRoot
 try {
     if (-not $SkipBuild) { & ./build.ps1 -Mode Apk -Jdk $Jdk }
-    if (-not $Apk) { $Apk = (Resolve-Path -LiteralPath 'dist/Recom3Capture-0.1.0-dev.apk').ProviderPath }
+    if (-not $Apk) { $Apk = (Resolve-Path -LiteralPath 'dist/Recom3Capture-0.1.1-dev.apk').ProviderPath }
     New-Item -ItemType Directory -Force -Path build/rif-stage,dist | Out-Null
     $stage = (Resolve-Path -LiteralPath 'build/rif-stage').ProviderPath
     $output = Join-Path $stage 'output.rif'
